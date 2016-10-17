@@ -2,20 +2,53 @@
 //  AppDelegate.swift
 //  Flicks
 //
-//  Created by Ale on 10/15/16.
+//  Created by anegrete on 10/15/16.
 //  Copyright © 2016 Alejandra Negrete. All rights reserved.
 //
 
 import UIKit
+import AFNetworking
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
 
-
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+
+        UIApplication.shared.statusBarStyle = .lightContent
+        
+        window = UIWindow(frame: UIScreen.main.bounds)
+    
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+
+        // Init NavigationViewController for Now Playing movies
+        let nowPlayingNavigationController = storyboard.instantiateViewController(withIdentifier: "MoviesNavigationController") as! UINavigationController
+        let nowPlayingViewController = nowPlayingNavigationController.topViewController as! MoviesViewController
+        nowPlayingViewController.endpoint = "now_playing"
+        nowPlayingNavigationController.tabBarItem.title = "Now Playing"
+        nowPlayingNavigationController.tabBarItem.image = UIImage(named: "now_playing") //25, 50, 75
+
+        // Init NavigationViewController for Top Rated movies
+        let topRatedNavigationController = storyboard.instantiateViewController(withIdentifier: "MoviesNavigationController") as! UINavigationController
+        let topRatedViewController = topRatedNavigationController.topViewController as! MoviesViewController
+        topRatedViewController.endpoint = "top_rated"
+        topRatedNavigationController.tabBarItem.title = "Top Rated"
+        topRatedNavigationController.tabBarItem.image = UIImage(named: "top_rated")
+
+        // Init TabBarController
+        let tabBarController = UITabBarController()
+        tabBarController.tabBar.barTintColor = UIColor.black
+        tabBarController.tabBar.tintColor = UIColor.orange
+        tabBarController.tabBar.unselectedItemTintColor = UIColor.gray
+        tabBarController.viewControllers = [nowPlayingNavigationController, topRatedNavigationController]
+        tabBarController.delegate = nowPlayingViewController
+        window?.rootViewController = tabBarController
+        window?.makeKeyAndVisible()
+
+        // Init reachability to start monitoring network changes
+        self.setupReachability()
+
         return true
     }
 
@@ -41,6 +74,34 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
     }
 
+    // MARK: - Reachability
 
+    func setupReachability() {
+        
+        // Start monitoring reachability status changes
+        let reachabilityManager = AFNetworkReachabilityManager.shared()
+        reachabilityManager.startMonitoring()
+        reachabilityManager.setReachabilityStatusChange { (AFNetworkReachabilityStatus) in
+
+            switch(AFNetworkReachabilityStatus) {
+                
+            case .unknown, .notReachable:
+                print("Not reachable")
+                self.visibleViewController().isOnline(isOnline: false)
+                
+            case .reachableViaWiFi, .reachableViaWWAN:
+                print("Reachable")
+                self.visibleViewController().isOnline(isOnline: true)
+            }
+        }
+    }
+
+    // MARK: - View Controllers
+
+    // Get current visible view controller
+    func visibleViewController() -> MoviesViewController {
+        let tabBarController = self.window?.rootViewController as! UITabBarController
+        let navigationViewController = tabBarController.selectedViewController as! UINavigationController
+        return navigationViewController.viewControllers[0] as! MoviesViewController
+    }
 }
-
